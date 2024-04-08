@@ -56,6 +56,20 @@ def clean_chat_data(messages: dict) -> list[dict]:
 
 
 def find_message_chain(messages: dict, message_id: str) -> list[dict]:
+    """
+    Recursively finds a message chain based on message IDs in a context field, starting from the specified message ID.
+
+    Args:
+        messages (dict): A dictionary containing all messages.
+        message_id (str): The ID of the message from which to start the chain.
+
+    Raises:
+        ValueError: If the message ID is not found in the provided messages.
+
+    Returns:
+        list[dict]: A list of dictionaries representing the message chain, ordered from the first message to the
+            specified one.
+    """
     if message_id not in messages:
         return []
 
@@ -85,6 +99,18 @@ def find_message_chain(messages: dict, message_id: str) -> list[dict]:
 
 
 def configure_database(config: DatabaseConfig) -> WhatsAppDB:
+    """
+    Configures and returns a database connection instance based on the provided configuration.
+
+    Args:
+        config (DatabaseConfig): A dictionary containing database configuration options.
+
+    Raises:
+        ValueError: If neither a credential path nor encoded JSON credentials are provided in the configuration.
+
+    Returns:
+        WhatsAppDB: An instance of the WhatsAppDB class configured with the specified options.
+    """
     credential_path = config.get('credential_path')
     credential_encoded_json = config.get('credential_encoded_json')
     if credential_path is None and credential_encoded_json is None:
@@ -99,33 +125,106 @@ def configure_database(config: DatabaseConfig) -> WhatsAppDB:
 
 
 class WhatsAppDB(FirestoreDB):
+    """
+    A class for interacting with the Firestore database, specifically designed for a WhatsApp-like chat application.
+
+    This class extends FirestoreDB to provide methods tailored to storing, retrieving, and managing chat messages
+    and banned user data.
+    """
 
     def __init__(self, credentials_path: str, database: str = None, backup_folder: str = None):
+        """
+        Initializes a new instance of the WhatsAppDB class.
+
+        Args:
+            credentials_path (str): The file path to the Firestore credentials JSON.
+            database (str, optional): The name of the Firestore database to use. Defaults to None.
+            backup_folder (str, optional): The path to the folder used for backups. Defaults to None.
+        """
         super().__init__(credentials_path, database=database, collections=COLLECTIONS, backup_folder=backup_folder)
 
     def add_chat_message(self, message: dict, wa_id: str) -> str:
+        """
+         Adds a new chat message to the database under the specified WhatsApp ID.
+
+         Args:
+             message (dict): The message data to add.
+             wa_id (str): The WhatsApp ID associated with the message.
+
+         Returns:
+             str: The ID of the chat document where the message was added.
+         """
         message_id = message['id']
         data = {message_id: message}
         chat_id = self.update_document(CHAT_COLLECTION, wa_id, data, create_if_missing=True)
         return chat_id
 
     def add_banned_user(self, data: dict, user_id: str) -> str:
+        """
+        Adds a new banned user to the database.
+
+        Args:
+            data (dict): The data of the banned user to add.
+            user_id (str): The ID of the user to ban.
+
+        Returns:
+            str: The token ID of the banned user document.
+        """
         token_id = self.add_document(BANNED_USERS_COLLECTION, data, document_name=user_id)
         return token_id
 
     def update_banned_user(self, user_id: str, data: dict):
+        """
+        Updates the data for a banned user in the database.
+
+        Args:
+            user_id (str): The ID of the user to update.
+            data (dict): A dictionary of the data to update for the banned user.
+        """
         self.update_document(BANNED_USERS_COLLECTION, user_id, data)
 
     def delete_chat(self, wa_id: str):
+        """
+        Deletes a chat document from the database based on the specified WhatsApp ID.
+
+        Args:
+            wa_id (str): The WhatsApp ID associated with the chat document to delete.
+        """
         self.delete_document(CHAT_COLLECTION, wa_id)
 
     def delete_banned_user(self, user_id: str):
+        """
+        Deletes a banned user document from the database based on the specified user ID.
+
+        Args:
+            user_id (str): The ID of the banned user to delete.
+        """
         self.delete_document(BANNED_USERS_COLLECTION, user_id)
 
     def get_chat(self, wa_id: str) -> dict:
+        """
+        Retrieves the chat document associated with the specified WhatsApp ID.
+
+        Args:
+            wa_id (str): The WhatsApp ID associated with the chat to retrieve.
+
+        Returns:
+            dict: The chat document data.
+        """
         return self.get_document_data(CHAT_COLLECTION, wa_id)
 
     def get_filtered_chat(self, wa_id: str, filters: list[tuple[str, str, str | float]]) -> dict:
+        """
+        Retrieves and filters a chat document based on specified filters.
+
+        Args:
+            wa_id (str): The WhatsApp ID associated with the chat to retrieve and filter.
+            filters (list[tuple[str, str, str | float]]): A list of filter tuples where each tuple contains
+                a field name, an operator as a string ('==', '!=', '>', '<', '>=', '<='), and a value to compare.
+
+        Returns:
+            dict: The filtered chat document data.
+        """
         chat = self.get_chat(wa_id)
         filtered_chat = {}
         for message_id, message in chat.items():
@@ -158,18 +257,59 @@ class WhatsAppDB(FirestoreDB):
         return filtered_chat
 
     def list_banned_user_names(self) -> list[str]:
+        """
+        Lists the names (document IDs) of all banned users in the database.
+
+        Returns:
+            list[str]: A list of banned user names (IDs).
+        """
         return self.get_document_names(BANNED_USERS_COLLECTION)
 
     def list_banned_users(self, with_id: bool = False, as_dict: bool = False) -> list[dict] | dict[str, dict]:
+        """
+        Retrieves a list or dictionary of all banned users.
+
+        Args:
+            with_id (bool, optional): If True, includes the document IDs in the returned data. Defaults to False.
+            as_dict (bool, optional): If True, returns the data as a dictionary indexed by user IDs instead of a list.
+                Defaults to False.
+
+        Returns:
+            list[dict] | dict[str, dict]: The banned users data as a list of dictionaries or a dictionary of
+                dictionaries.
+        """
         ret = self.get_collection_data(BANNED_USERS_COLLECTION, with_id=with_id)
         if as_dict:
             ret = {x['id']: x for x in ret}
         return ret
 
     def get_banned_user(self, user_id: str, with_id: bool = False) -> dict:
+        """
+        Retrieves the data for a banned user based on the specified user ID.
+
+        Args:
+            user_id (str): The ID of the banned user to retrieve.
+            with_id (bool, optional): If True, includes the document ID in the returned data. Defaults to False.
+
+        Returns:
+            dict: The data for the banned user.
+        """
         return self.get_document_data(BANNED_USERS_COLLECTION, user_id, with_id=with_id)['access_token']
 
     def get_conversation_chain(self, wa_id: str, message_id: str) -> list[dict]:
+        """
+        Retrieves a conversation chain starting from the specified message ID.
+
+        Args:
+            wa_id (str): The WhatsApp ID associated with the chat.
+            message_id (str): The starting message ID of the conversation chain to retrieve.
+
+        Raises:
+            ValueError: If the specified message ID is not found in the chat history.
+
+        Returns:
+            list[dict]: A list of message dictionaries representing the conversation chain.
+        """
         chat = self.get_chat(wa_id)
         message_ids = list(chat.keys())
         if message_id not in message_ids:
@@ -178,6 +318,18 @@ class WhatsAppDB(FirestoreDB):
         return chain
 
     def get_conversation_history(self, wa_id: str, since_seconds_ago: int = None) -> list[dict]:
+        """
+        Retrieves the conversation history for a given WhatsApp ID, optionally filtering by messages since a certain
+        time.
+
+        Args:
+            wa_id (str): The WhatsApp ID associated with the chat.
+            since_seconds_ago (int, optional): The time in seconds to look back from the current time for messages. If
+                None, retrieves all messages.
+
+        Returns:
+            list[dict]: A list of dictionaries representing the conversation history, sorted by timestamp.
+        """
         if since_seconds_ago is not None and since_seconds_ago > 0:
             start_time = time.time() - since_seconds_ago
             chat = self.get_filtered_chat(wa_id, [('timestamp', '>=', start_time)])
@@ -191,6 +343,25 @@ class WhatsAppDB(FirestoreDB):
 
     def get_conversation(self, wa_id: str, since_seconds_ago: int = None, chain_mode: bool = False,
                          message_id: str = None) -> list[dict]:
+        """
+        Retrieves a conversation for a given WhatsApp ID. Can operate in two modes: retrieving all messages since a
+        given time, or retrieving a specific conversation chain starting from a given message ID.
+
+        Args:
+            wa_id (str): The WhatsApp ID associated with the chat.
+            since_seconds_ago (int, optional): In non-chain mode, the time in seconds to look back from the current
+                time for messages. Defaults to None.
+            chain_mode (bool, optional): If True, operates in chain mode to retrieve a conversation chain starting
+                from the specified message ID. Defaults to False.
+            message_id (str, optional): In chain mode, the starting message ID of the conversation chain to
+                retrieve. Defaults to None.
+
+        Raises:
+            ValueError: If chain_mode is True and no message_id is provided.
+
+        Returns:
+            list[dict]: A list of dictionaries representing the conversation, either as a history or a specific chain.
+        """
         if chain_mode:
             if message_id is None:
                 raise ValueError("Message ID is required in chain mode")
