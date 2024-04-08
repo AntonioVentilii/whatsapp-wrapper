@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import Any, Callable, Optional
 
 import requests
 from requests import Response
@@ -13,10 +12,8 @@ from .media_utilities import check_media_type_supported, save_media_to_temp_cach
 from .message_object import MessageObject
 from .whatsapp_db import DatabaseConfig, WhatsAppDB, configure_database
 
-ErrorHandlerType = Callable[[Response, dict], Optional[Any]]
 
-
-def _default_error_handler(response: Response, data: dict):
+def _default_error_handler(_, response: Response, data: dict):
     status_code = response.status_code
     error_message = (
         f"Request was failed with status code: {status_code}."
@@ -33,7 +30,7 @@ class WhatsAppAPI:
     _MEDIA_URI = 'media'
 
     def __init__(self, mobile_id: str, api_token: str, version: str = LAST_API_VERSION,
-                 database_config: DatabaseConfig = None, error_handler: ErrorHandlerType = None):
+                 database_config: DatabaseConfig = None, error_handler=None):
         self.mobile_id = mobile_id
         self.bearer_token = api_token
         self.version = version or self.DEFAULT_API_VERSION
@@ -43,7 +40,16 @@ class WhatsAppAPI:
             warnings.warn(txt, WhatsAppAPIWarning)
         else:
             self._db = configure_database(database_config)
-        self.error_handler: Callable[[Response, dict | None], Any | None] = error_handler or _default_error_handler
+        self.error_handler = self._custom_error_handler_factory(error_handler or _default_error_handler)
+
+    def _custom_error_handler_factory(self, external_error_handler):
+        """Bind an external error handler to the current instance."""
+
+        def error_handler(response: Response, data: dict):
+            # Call the external error handler with self as the first argument
+            external_error_handler(self, response, data)
+
+        return error_handler
 
     @property
     def db(self) -> WhatsAppDB:
