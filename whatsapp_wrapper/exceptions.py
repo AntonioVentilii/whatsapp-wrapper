@@ -1,0 +1,2 @@
+class WhatsAppAPIWarning(Warning):
+    pass
