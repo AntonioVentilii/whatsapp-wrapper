@@ -166,7 +166,7 @@ class WhatsAppAPI:
             "status": "read",
             "message_id": message_id,
         }
-        ret = self._send_message(data)
+        ret = self._send_message(data, save_to_db=False)
         return ret
 
     def send_text(self, to: str, message: str, preview_url: bool = False,
