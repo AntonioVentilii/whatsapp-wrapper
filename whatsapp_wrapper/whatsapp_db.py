@@ -46,11 +46,12 @@ def json_to_encoded_credentials(file: str) -> str:
 def clean_chat_data(messages: dict) -> list[dict]:
     cleaned_messages = [
         {
-            'body': message['text']['body'],
+            'body': message.get('text', {}).get('body'),
             'from': message.get('from'),
             'to': message.get('to'),
             'timestamp': message['timestamp'],
-        } for message in messages.values() if message.get('type') == 'text'
+        } for message in messages.values()
+        if message.get('type') is not None and message.get('text') is not None
     ]
     return cleaned_messages
 
