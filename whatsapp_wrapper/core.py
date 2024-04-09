@@ -41,6 +41,7 @@ class WhatsAppAPI:
         else:
             self._db = configure_database(database_config)
         self.error_handler = self._custom_error_handler_factory(error_handler or _default_error_handler)
+        self._banned_users = []
 
     def _custom_error_handler_factory(self, external_error_handler):
         """Bind an external error handler to the current instance."""
@@ -54,6 +55,20 @@ class WhatsAppAPI:
     @property
     def db(self) -> WhatsAppDB:
         return self._db
+
+    @property
+    def banned_users(self) -> list[str]:
+        if self.db:
+            db_banned_users = self.db.list_banned_user_names()
+        else:
+            db_banned_users = []
+        ret = self._banned_users + db_banned_users
+        ret = list(set(ret))
+        return ret
+
+    @banned_users.setter
+    def banned_users(self, value: list[str]):
+        self._banned_users = value
 
     @property
     def base_url(self):
