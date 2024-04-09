@@ -51,10 +51,11 @@ class MessageObject:
             'to': str(self.to),
             'messaging_product': self.messaging_product,
             'recipient_type': self.recipient_type,
-            'context': {
+        }
+        if self.reply_to_message_id:
+            data['context'] = {
                 'message_id': self.reply_to_message_id
             }
-        }
         return data
 
     def text(self, text: str, preview_url: bool = True) -> dict:

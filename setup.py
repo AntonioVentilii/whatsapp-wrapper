@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='whatsapp_wrapper',
-    version='0.1.4',
+    version='0.1.5',
     author='Antonio Ventilii',
     author_email='antonioventilii@gmail.com',
     license='MIT',
