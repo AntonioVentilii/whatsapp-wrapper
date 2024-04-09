@@ -56,19 +56,34 @@ class WhatsAppAPI:
     def db(self) -> WhatsAppDB:
         return self._db
 
+    def get_db_banned_users(self) -> list[str]:
+        if self.db:
+            ret = self.db.list_banned_user_names()
+        else:
+            ret = []
+        return ret
+
     @property
     def banned_users(self) -> list[str]:
-        if self.db:
-            db_banned_users = self.db.list_banned_user_names()
-        else:
-            db_banned_users = []
+        db_banned_users = self.get_db_banned_users()
         ret = self._banned_users + db_banned_users
         ret = list(set(ret))
         return ret
 
-    @banned_users.setter
-    def banned_users(self, value: list[str]):
-        self._banned_users = value
+    def ban_users(self, user_ids: list[str] | str, reason: str = "Manual ban"):
+        if isinstance(user_ids, str):
+            user_ids = [user_ids]
+        not_yet_banned = [x for x in user_ids if x not in self.banned_users]
+        if self.db:
+            for user_id in not_yet_banned:
+                data = {
+                    "phone_number_id": user_id,
+                    "reason": reason,
+                    "timestamp": time.time(),
+                }
+                self.db.add_banned_user(data, user_id)
+        else:
+            self._banned_users += not_yet_banned
 
     @property
     def base_url(self):
