@@ -13,6 +13,23 @@ from .message_object import MessageObject
 from .whatsapp_db import DatabaseConfig, WhatsAppDB, configure_database
 
 
+def wrap_text(text: str, wrap: str, each_line: bool = True) -> str:
+    if each_line:
+        text_parts = text.split('\n')
+        wrapped_text = '\n'.join([f'{wrap}{part}{wrap}' for part in text_parts])
+    else:
+        wrapped_text = f'{wrap}{text}{wrap}'
+    return wrapped_text
+
+
+def to_bold(text: str) -> str:
+    return wrap_text(text, '*')
+
+
+def to_italic(text: str) -> str:
+    return wrap_text(text, '_')
+
+
 def _default_error_handler(_, response: Response, data: dict):
     status_code = response.status_code
     error_message = (
@@ -184,8 +201,12 @@ class WhatsAppAPI:
         ret = self._send_message(data, save_to_db=False)
         return ret
 
-    def send_text(self, to: str, message: str, preview_url: bool = False,
-                  reply_to_message_id: str = None, save_to_db: bool = True) -> dict:
+    def send_text(self, to: str, message: str, preview_url: bool = False, reply_to_message_id: str = None,
+                  save_to_db: bool = True, bold: bool = False, italic: bool = False) -> dict:
+        if bold:
+            message = to_bold(message)
+        if italic:
+            message = to_italic(message)
         message_obj = MessageObject(to, reply_to_message_id=reply_to_message_id)
         payload = message_obj.text(message, preview_url=preview_url)
         ret = self._send_message(payload, save_to_db=save_to_db)
@@ -205,14 +226,23 @@ class WhatsAppAPI:
         return ret
 
     def send_document(self, to: str, document_id_or_url: str, caption: str = None, filename: str = None,
-                      reply_to_message_id: str = None, save_to_db: bool = True) -> dict:
+                      reply_to_message_id: str = None, save_to_db: bool = True, bold: bool = False,
+                      italic: bool = False) -> dict:
+        if bold:
+            caption = to_bold(caption)
+        if italic:
+            caption = to_italic(caption)
         message_obj = MessageObject(to, reply_to_message_id=reply_to_message_id)
         payload = message_obj.document(document_id_or_url, caption=caption, filename=filename)
         ret = self._send_message(payload, save_to_db=save_to_db)
         return ret
 
     def send_image(self, to: str, image_id_or_url: str, caption: str = None, reply_to_message_id: str = None,
-                   save_to_db: bool = True) -> dict:
+                   save_to_db: bool = True, bold: bool = False, italic: bool = False) -> dict:
+        if bold:
+            caption = to_bold(caption)
+        if italic:
+            caption = to_italic(caption)
         message_obj = MessageObject(to, reply_to_message_id=reply_to_message_id)
         payload = message_obj.image(image_id_or_url, caption=caption)
         ret = self._send_message(payload, save_to_db=save_to_db)
@@ -226,7 +256,11 @@ class WhatsAppAPI:
         return ret
 
     def send_video(self, to: str, video_id_or_url: str, caption: str = None, reply_to_message_id: str = None,
-                   save_to_db: bool = True) -> dict:
+                   save_to_db: bool = True, bold: bool = False, italic: bool = False) -> dict:
+        if bold:
+            caption = to_bold(caption)
+        if italic:
+            caption = to_italic(caption)
         message_obj = MessageObject(to, reply_to_message_id=reply_to_message_id)
         payload = message_obj.video(video_id_or_url, caption=caption)
         ret = self._send_message(payload, save_to_db=save_to_db)
