@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='whatsapp_wrapper',
-    version='0.1.6',
+    version='0.1.7',
     author='Antonio Ventilii',
     author_email='antonioventilii@gmail.com',
     license='MIT',
@@ -25,14 +25,15 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ],
     keywords='WhatsApp, Firestore, API, integration, messaging',
     install_requires=[
         'requests',
         'firestore-wrapper',
-        'pydub',
         'ffmpeg-downloader',
-        'ffmpeg-python',
     ],
     python_requires='>=3.8',
     entry_points={
